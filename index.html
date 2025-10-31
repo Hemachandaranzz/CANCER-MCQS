@@ -21,6 +21,7 @@
                         'primary-blue': '#1e40af', /* Darker blue for accents */
                         'secondary-green': '#10b981', /* Emerald green for correct */
                         'danger-red': '#ef4444', /* Red for incorrect */
+                        'hint-yellow': '#f59e0b', /* Amber for hint button */
                         'card-bg': '#ffffff',
                     }
                 }
@@ -46,6 +47,37 @@
             <!-- Progress text will be rendered here -->
         </div>
 
+        <!-- Navigation and Hint Buttons (UPDATED STRUCTURE) -->
+        <div class="flex flex-col space-y-3 mt-6 pt-4 border-t border-gray-200">
+            <!-- Top Row: Hint Button (full width) -->
+            <button id="hint-btn" onclick="getLLMHint()" class="w-full px-4 py-2 bg-hint-yellow text-white rounded-lg shadow-md hover:bg-yellow-600 transition duration-150 font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+                💡 Get Hint
+            </button>
+            
+            <!-- Bottom Row: Prev | Jump | Next -->
+            <div class="flex justify-between items-center space-x-2">
+                <button id="prev-btn" onclick="goToQuestion(-1)" class="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg shadow-md hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 font-semibold text-center">
+                    ← Previous
+                </button>
+                
+                <!-- New Jump Menu Dropdown -->
+                <select id="jump-menu" onchange="jumpToSelectedQuestion(this.value)" class="p-2 border border-gray-300 rounded-lg text-sm bg-white shadow-sm focus:ring-primary-blue focus:border-primary-blue w-1/3 min-w-[120px] text-center font-semibold">
+                    <option value="" disabled selected>Jump to Q#</option>
+                    <!-- Options populated by JS -->
+                </select>
+
+                <button id="next-btn-nav" onclick="goToQuestion(1)" class="flex-1 px-4 py-2 bg-primary-blue text-white rounded-lg shadow-md hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 font-semibold text-center">
+                    Next →
+                </button>
+            </div>
+        </div>
+        
+        <!-- LLM Hint Display Area -->
+        <div id="llm-hint-area" class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-gray-700 hidden">
+            <!-- Hint content or loading spinner goes here -->
+        </div>
+
+
         <!-- Feedback Modal/Message Box -->
         <div id="feedback-box" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
             <div class="bg-card-bg p-8 rounded-xl shadow-2xl w-full max-w-sm text-center transform scale-100 transition-transform duration-300" id="feedback-card">
@@ -58,8 +90,7 @@
     </div>
 
     <script>
-        // --- QUIZ DATA STRUCTURE ---
-        // Questions grouped by week as a single array for sequential display
+        // --- QUIZ DATA STRUCTURE (REDACTED FOR BREVITY - SAME AS PREVIOUS VERSION) ---
         const quizData = [
             // --- WEEK 0 ASSIGNMENT (15 Questions) ---
             { week: 0, id: 1, question: "Base resistance value of interdigitated electrode structure is", options: ["Zero", "Very low", "Very high", "Depends on fabrication steps"], answer: "Very high", image: null },
@@ -96,7 +127,7 @@
             { week: 1, id: 15, question: "Which microscope will you choose to study electroplating coatings and thin films?", options: ["inverted microscope", "compound microscope", "stereo microscope", "metallurgical microscope"], answer: "metallurgical microscope", image: null },
 
             // --- WEEK 2 ASSIGNMENT (15 Questions) ---
-            { week: 2, id: 1, question: "An oxide layer is grown on silicon wafer by dry oxidation. The layer is coated with Positive Photoresist. The mask is shown in figure. Which one of the following structures will we get after exposure followed by development and HF dip (before acetone dip)? (Placeholder for image showing mask and layers)", options: ["Structure with exposed Oxide layer etched away (trench structure)", "Structure with Photoresist forming a pillar on top of the Oxide", "Structure where only oxide is left intact in the middle", "Structure showing no change in layers after the dip"], answer: "Structure with exposed Oxide layer etched away (trench structure)", image: "https://placehold.co/400x150/1e40af/ffffff?text=W2+Q1+Image%3A+Positive+PR+Process" },
+            { week: 2, id: 1, question: "An oxide layer is grown on silicon wafer by dry oxidation. The layer is coated with Positive Photoresist. The mask is shown in figure. Which one of the following structures will we get after exposure followed by development and HF dip (before acetone dip)? (Placeholder for image showing mask and layers)", answer: "Structure with exposed Oxide layer etched away (trench structure)", image: "https://placehold.co/400x150/1e40af/ffffff?text=W2+Q1+Image%3A+Positive+PR+Process", options: ["Structure with exposed Oxide layer etched away (trench structure)", "Structure with Photoresist forming a pillar on top of the Oxide", "Structure where only oxide is left intact in the middle", "Structure showing no change in layers after the dip"] },
             { week: 2, id: 2, question: "Which is not a step of cleaning of Si wafer (100 orientation) before patterning?", options: ["Dip the wafer into HF", "Cleaning it with DI water", "Purging N2 gas", "Dip wafer into TMAH (Tetramethylammonium hydroxide) at 80 C"], answer: "Dip wafer into TMAH (Tetramethylammonium hydroxide) at 80 C", image: null },
             { week: 2, id: 3, question: "Why HMDS (hexamethyldisilazane) is coated on Si substrate?", options: ["It will improve adhesion of Photoresist on Si substrate", "It will protect the wafer from oxidation", "It will remove the native oxide layer", "It will make the surface hydrophilic"], answer: "It will improve adhesion of Photoresist on Si substrate", image: null },
             { week: 2, id: 4, question: "Buffered HF (BOE) is used as an etchant for SiO2 layer. Which kind of etching is this?", options: ["Isotropic and Dry Etching", "Isotropic and Wet Etching", "Anisotropic and Dry Etching", "Anisotropic and Wet Etching"], answer: "Isotropic and Wet Etching", image: null },
@@ -107,9 +138,9 @@
             { week: 2, id: 9, question: "A 1µm thick SiO2 layer is etched with Buffered HF. 10nm of silicon is also etched. What is the etch selectivity of Oxide with respect to Si?", options: ["100:1", "10:1", "1:10", "1:100"], answer: "100:1", image: null },
             { week: 2, id: 10, question: "Glass wafer to silicon wafer bonding can be done by:", options: ["Plasma bonding", "Direct wafer bonding", "Anodic bonding", "Using adhesive"], answer: "Anodic bonding", image: null },
             { week: 2, id: 11, question: "The silicon diaphragm structure is an example of ________ and it is the basic structure used in ________.", options: ["Isotropic Etching, Actuators", "Isotropic Etching, Pressure Sensor", "Anisotropic Etching, Pressure Sensor", "Anisotropic Etching, Actuators"], answer: "Anisotropic Etching, Pressure Sensor", image: "https://placehold.co/400x150/1e40af/ffffff?text=W2+Q11+Image%3A+Diaphragm+Structure" },
-            { week: 2, id: 12, question: "What type of photomask defect is shown in figure given below? (Placeholder for image)", options: ["Chrome spot", "Pin hole", "Chrome gap", "Clear Break"], answer: "Pin hole", image: "https://placehold.co/400x150/1e40af/ffffff?text=W2+Q12+Image%3A+Photomask+Defect" },
+            { week: 2, id: 12, question: "What type of photomask defect is shown in figure given below? (Placeholder for image)", answer: "Pin hole", image: "https://placehold.co/400x150/1e40af/ffffff?text=W2+Q12+Image%3A+Photomask+Defect", options: ["Chrome spot", "Pin hole", "Chrome gap", "Clear Break"] },
             { week: 2, id: 13, question: "Spin coated Photoresist thickness is independent of:", options: ["Spin coater rotation speed", "Spin coating time", "Viscosity of Photoresist", "Coated Primer"], answer: "Coated Primer", image: null },
-            { week: 2, id: 14, question: "Which type of micromachining is shown for the VOC sensor cross sectional view? (Placeholder for image)", options: ["Bulk Micromachining", "Surface Micromachining", "Both (a) and (b)", "None of them"], answer: "Both (a) and (b)", image: "https://placehold.co/400x150/1e40af/ffffff?text=W2+Q14+Image%3A+VOC+Sensor+X-Section" },
+            { week: 2, id: 14, question: "Which type of micromachining is shown for the VOC sensor cross sectional view? (Placeholder for image)", answer: "Both (a) and (b)", image: "https://placehold.co/400x150/1e40af/ffffff?text=W2+Q14+Image%3A+VOC+Sensor+X-Section", options: ["Bulk Micromachining", "Surface Micromachining", "Both (a) and (b)", "None of them"] },
             { week: 2, id: 15, question: "Why split field microscopy is used in mask aligner? I. To observe alignment marks in micron range. II. To view both microscopes' output for faster alignment.", options: ["I, II, III, IV", "I, II, III", "I, II", "I, II, IV"], answer: "I, II", image: null },
 
             // --- WEEK 3 ASSIGNMENT (15 Questions) ---
@@ -158,13 +189,13 @@
             { week: 5, id: 9, question: "The custom-built electronic module for real time analysis of cell morphology made use of:", options: ["Dark field microscopy", "Bright field microscopy", "Stereo microscopy", "Inverted microscopy"], answer: "Bright field microscopy", image: null },
             { week: 5, id: 10, question: "Why H&E staining plays a critical role in tissue-based diagnosis or research?", options: ["clear staining of cell structures such as cytoplasm, nucleus and organelles", "differentiate two morphologically same cancer types", "enhance contrast in microscopy image", "all the above"], answer: "all the above", image: null },
             { week: 5, id: 11, question: "Which among the following methods falls under organ scale diagnosis?", options: ["Cytology", "Histopathology", "Flow cytometry", "Mammography"], answer: "Mammography", image: null },
-            { week: 5, id: 12, question: "Commercially available non-Invasive oral cancer screening devices are:", options: ["VELscope", "OralID", "Oscan", "All the above"], answer: "All the above", image: null },
+            { week: 5, id: 12, question: "Commercially available non-Invasive oral cancer screening devices are:", options: ["VELscope", "OralID", "Oscan", "All the above"], answer: "All of the above", image: null },
 
             // --- WEEK 6 ASSIGNMENT (15 Questions) ---
-            { week: 6, id: 1, question: "Compute the output voltage Vo for the Summing Amplifier circuit shown with R1=4kΩ, R2=2kΩ, R3=3kΩ, Rf=12kΩ, V1 = 1 V, V2=0.5 V and V3=0.25 V.", options: ["-7V", "7V", "10 V", "-10 V"], answer: "-7V", image: "https://placehold.co/400x150/1e40af/ffffff?text=W6+Q1+Image%3A+Summing+Amplifier" },
+            { week: 6, id: 1, question: "Compute the output voltage Vo for the Summing Amplifier circuit shown with R1=4kΩ, R2=2kΩ, R3=3kΩ, Rf=12kΩ, V1 = 1 V, V2=0.5 V and V3=0.25 V.", answer: "-7V", image: "https://placehold.co/400x150/1e40af/ffffff?text=W6+Q1+Image%3A+Summing+Amplifier", options: ["-7V", "7V", "10 V", "-10 V"] },
             { week: 6, id: 2, question: "The input impedance of an op-amp is higher for:", options: ["Inverting Amplifier", "Difference Amplifier", "Voltage Follower", "None of the mentioned"], answer: "Voltage Follower", image: null },
-            { week: 6, id: 3, question: "Consider an op-amp with input offset voltage of 1 mV. Given R1=1 kΩ and R2=3 MΩ, then calculate the output voltage Vout.", options: ["1 V", "3 V", "4 V", "5 V"], answer: "3 V", image: "https://placehold.co/400x150/1e40af/ffffff?text=W6+Q3+Image%3A+Op-Amp+Circuit" },
-            { week: 6, id: 4, question: "If a sine wave is given as input to the circuit shown, then the output will be:", options: ["Triangular Wave", "Square Wave", "Half wave rectified sine wave", "Full wave rectified sine wave"], answer: "Square Wave", image: "https://placehold.co/400x150/1e40af/ffffff?text=W6+Q4+Image%3A+Comparator+Circuit" },
+            { week: 6, id: 3, question: "Consider an op-amp with input offset voltage of 1 mV. Given R1=1 kΩ and R2=3 MΩ, then calculate the output voltage Vout.", answer: "3 V", image: "https://placehold.co/400x150/1e40af/ffffff?text=W6+Q3+Image%3A+Op-Amp+Circuit", options: ["1 V", "3 V", "4 V", "5 V"] },
+            { week: 6, id: 4, question: "If a sine wave is given as input to the circuit shown, then the output will be:", answer: "Square Wave", image: "https://placehold.co/400x150/1e40af/ffffff?text=W6+Q4+Image%3A+Comparator+Circuit", options: ["Triangular Wave", "Square Wave", "Half wave rectified sine wave", "Full wave rectified sine wave"] },
             { week: 6, id: 5, question: "A tuned amplifier has peak output at 4 MHz and quality factor 50. The bandwidth and 3-dB frequencies shall be at what values respectively?", options: ["40 kHz, 4.02 MHz, 3.98 MHz", "40 kHz, 4.04 MHz, 3.96 MHz", "80 kHz, 4.04 MHz, 3.96 MHz", "80 kHz, 4.08 MHz, 3.92 MHz"], answer: "80 kHz, 4.04 MHz, 3.96 MHz", image: null },
             { week: 6, id: 6, question: "Which of the following electrical characteristics is not exhibited by an ideal op-amp?", options: ["Infinite voltage gain", "Infinite bandwidth", "Infinite output resistance", "Infinite slew rate"], answer: "Infinite output resistance", image: null },
             { week: 6, id: 7, question: "3V, 5V and 7V are the three input voltages applied to the inverting input terminal of averaging amplifier. Determine the output voltage?", options: ["-5V", "-15V", "+15V", "+5V"], answer: "-5V", image: null },
@@ -172,7 +203,7 @@
             { week: 6, id: 9, question: "Which circuit captures the voltage of a continuously varying analog signal and locks its value at a constant level for a specified minimum period?", options: ["Unity Gain Inverting Amplifier", "Unity Gain Non-Inverting Amplifier", "Inverting Amplifier with Infinite Gain", "Non-Inverting Amplifier with Infinite Gain"], answer: "Unity Gain Non-Inverting Amplifier", image: null },
             { week: 6, id: 10, question: "The corner frequency is defined as the point at which the response drops ________ from the passband.", options: ["20 dB", "3 dB", "6 dB", "0.7071 dB"], answer: "3 dB", image: null },
             { week: 6, id: 11, question: "A low-pass filter has a cut off frequency of 4.5 kHz. Determine the bandwidth of the filter.", options: ["9 kHz", "2.25 kHz", "4.5 kHz", "Data Insufficient"], answer: "4.5 kHz", image: null },
-            { week: 6, id: 12, question: "Which is a low pass filter with cut-off frequency 1.6Hz with a pass band gain of 2? (Placeholder for image)", options: ["Option A", "Option B", "Option C", "Option D"], answer: "Option C (Placeholder)", image: "https://placehold.co/400x150/1e40af/ffffff?text=W6+Q12+Image%3A+Filter+Circuit" },
+            { week: 6, id: 12, question: "Which is a low pass filter with cut-off frequency 1.6Hz with a pass band gain of 2? (Placeholder for image)", answer: "Option C (Placeholder)", image: "https://placehold.co/400x150/1e40af/ffffff?text=W6+Q12+Image%3A+Filter+Circuit", options: ["Option A", "Option B", "Option C", "Option D"] },
             { week: 6, id: 13, question: "Using frequency scaling, convert 10kHz cut-off frequency (C=0.01µF, R=15.9kΩ) of the low pass filter to a cut-off frequency of 16kHz. (New R value)", options: ["6.25kΩ", "9.94kΩ", "16kΩ", "1.59kΩ"], answer: "9.94kΩ", image: null },
             { week: 6, id: 14, question: "Match the gain of the filter with the frequencies in the low pass filter (Missing table, assume order based on answer)", options: ["1-P, 2-R, 3-Q", "1-R, 2-P, 3-Q", "1-Q, 2-R, 3-P", "1-Q, 2-P, 3-R"], answer: "1-R, 2-P, 3-Q", image: null },
             { week: 6, id: 15, question: "A band-pass filter has a bandwidth of 300 Hz and center frequency of 4.7 kHz. Find the quality factor of the filter?", options: ["0.0638", "31.334", "7.833", "15.667"], answer: "15.667", image: null },
@@ -187,8 +218,8 @@
             { week: 7, id: 7, question: "What are the key features of Instrumentation Amplifier?", options: ["Low Noise", "High and Accurate Gain", "Low thermal Drift", "All of the above"], answer: "All of the above", image: null },
             { week: 7, id: 8, question: "Which is not desired for better etching process?", options: ["Lower Selectivity", "Controlled Etch Rate", "Better Directionality", "Environmental Safety"], answer: "Lower Selectivity", image: null },
             { week: 7, id: 9, question: "When etching an oxide contact hole, etch selectivity (oxide to PR) is 2.5. Oxide thickness is 140 nm with 50% overetch. What is the minimum possible photoresist thickness (resist etched away)?", options: ["70 nm", "112 nm", "84 nm", "140 nm"], answer: "84 nm", image: null },
-            { week: 7, id: 10, question: "For 4-bit DAC shown, what should be the output voltage? (Placeholder for image)", options: ["10 V", "5 V", "4 V", "8 V"], answer: "5 V", image: "https://placehold.co/400x150/1e40af/ffffff?text=W7+Q10+Image%3A+4-bit+DAC" },
-            { week: 7, id: 11, question: "What is Voltage gain for typical instrumentation amplifier shown? Given that R1=Rgain=5kΩ, R2=2kΩ, R3=3kΩ.", options: ["2", "3", "4.5", "6"], answer: "4.5", image: "https://placehold.co/400x150/1e40af/ffffff?text=W7+Q11+Image%3A+Inst.+Amp.+Circuit" },
+            { week: 7, id: 10, question: "For 4-bit DAC shown, what should be the output voltage? (Placeholder for image)", answer: "5 V", image: "https://placehold.co/400x150/1e40af/ffffff?text=W7+Q10+Image%3A+4-bit+DAC", options: ["10 V", "5 V", "4 V", "8 V"] },
+            { week: 7, id: 11, question: "What is Voltage gain for typical instrumentation amplifier shown? Given that R1=Rgain=5kΩ, R2=2kΩ, R3=3kΩ.", answer: "4.5", image: "https://placehold.co/400x150/1e40af/ffffff?text=W7+Q11+Image%3A+Inst.+Amp.+Circuit", options: ["2", "3", "4.5", "6"] },
             { week: 7, id: 12, question: "Which are the two main chemicals used for SiO2 etch?", options: ["BHF and Si3N4/SiO2", "BHF and NH4F", "Acetone and Si3N4/SiO2", "Acetone and NH4F"], answer: "BHF and NH4F", image: null },
             { week: 7, id: 13, question: "Which are the two basic steps iterated in BOSCH process?", options: ["Isotropic Plasma Etch & Deposition of Chemically reactive ions", "Anisotropic KOH etch & Deposition of Chemically inert passivation Layer", "Isotropic Plasma Etch & Deposition of Chemically Inert Passivation Layer", "Anisotropic Sputtered Etch & Deposition of reactive ions"], answer: "Isotropic Plasma Etch & Deposition of Chemically Inert Passivation Layer", image: null },
             { week: 7, id: 14, question: "What is typical frequency range of ECG signals of healthy human?", options: ["60-100 bpm", "80-150 bpm", "20-60 bpm", "0-20 bpm"], answer: "60-100 bpm", image: null },
@@ -202,10 +233,10 @@
             { week: 8, id: 6, question: "Which op-amp circuit is employed to reduce the base line wandering?", options: ["Low Pass filter", "High pass filter", "Notch filter", "Band pass filter"], answer: "High pass filter", image: null },
             { week: 8, id: 7, question: "How do you reduce the hum noise generated by the power supply in the ECG circuit?", options: ["By implementing band pass filters", "By implementing high pass filters", "By implementing notch filters", "By implementing low pass filters"], answer: "By implementing notch filters", image: null },
             { week: 8, id: 8, question: "Change in electrode position during the acquisition or measurement causes:", options: ["Increase in the amplitude of the signal", "Decrease in the amplitude of the signal", "Change in the base line of the signal", "Change in the signal phase by 180."], answer: "Change in the base line of the signal", image: null },
-            { week: 8, id: 9, question: "Compute the voltage across the capacitor at t = 10 ms (Integrator circuit shown, Vsupply=± 15 V)", options: ["15 V", "10 V", "6.3 V", "-15 V"], answer: "10 V", image: "https://placehold.co/400x150/1e40af/ffffff?text=W8+Q9+Image%3A+Integrator+Circuit" },
-            { week: 8, id: 10, question: "The circuit shown is connected to a 2 Vp-p sinusoidal input. What is the operation of the circuit?", options: ["Half wave rectifies the input Vi", "Integrates the input voltage Vi", "Differentiates the input voltage Vi", "Produces single pulses at the zero-crossing point in every cycle"], answer: "Produces single pulses at the zero-crossing point in every cycle", image: "https://placehold.co/400x150/1e40af/ffffff?text=W8+Q10+Image%3A+Wave+Shaper+Circuit" },
+            { week: 8, id: 9, question: "Compute the voltage across the capacitor at t = 10 ms (Integrator circuit shown, Vsupply=± 15 V)", answer: "10 V", image: "https://placehold.co/400x150/1e40af/ffffff?text=W8+Q9+Image%3A+Integrator+Circuit", options: ["15 V", "10 V", "6.3 V", "-15 V"] },
+            { week: 8, id: 10, question: "The circuit shown is connected to a 2 Vp-p sinusoidal input. What is the operation of the circuit?", answer: "Produces single pulses at the zero-crossing point in every cycle", image: "https://placehold.co/400x150/1e40af/ffffff?text=W8+Q10+Image%3A+Wave+Shaper+Circuit", options: ["Half wave rectifies the input Vi", "Integrates the input voltage Vi", "Differentiates the input voltage Vi", "Produces single pulses at the zero-crossing point in every cycle"] },
             { week: 8, id: 11, question: "For the circuit shown in question 10, what is the configuration of Opamp1?", options: ["Inverting configuration", "Schmitt trigger", "Zero crossing detector", "Differentiator"], answer: "Zero crossing detector", image: null },
-            { week: 8, id: 12, question: "For the circuit shown in question 10, select the Vout (Output Signal) - (Placeholder for image)", options: ["Option A (Pulse train)", "Option B (Sinusoidal)", "Option C (Triangle)", "Option D (Square)"], answer: "Option A (Pulse train)", image: "https://placehold.co/400x150/1e40af/ffffff?text=W8+Q12+Image%3A+Output+Waveform" },
+            { week: 8, id: 12, question: "For the circuit shown in question 10, select the Vout (Output Signal) - (Placeholder for image)", answer: "Option A (Pulse train)", image: "https://placehold.co/400x150/1e40af/ffffff?text=W8+Q12+Image%3A+Output+Waveform", options: ["Option A (Pulse train)", "Option B (Sinusoidal)", "Option C (Triangle)", "Option D (Square)"] },
             { week: 8, id: 13, question: "Notch filter is basically a:", options: ["Band Pass Filter with wide pass band", "Band Pass Filter with narrow pass band", "Band Reject Filter with narrow stop band", "Band Reject Filter with high stop band"], answer: "Band Reject Filter with narrow stop band", image: null },
             { week: 8, id: 14, question: "Which filter type is called a flat-flat filter?", options: ["Cauer filter", "Butterworth filter", "Chebyshev filter", "Band-reject filter"], answer: "Butterworth filter", image: null },
             { week: 8, id: 15, question: "In which filter the output and input voltages are equal in amplitude for all frequencies?", options: ["All-pass filter", "High pass filter", "Low pass filter", "No such filter exists"], answer: "All-pass filter", image: null },
@@ -215,12 +246,12 @@
             { week: 9, id: 2, question: "Which can be used to measure force?", options: ["Strain Gauges", "Bellows", "Bourdon gauges", "All the mentioned"], answer: "Strain Gauges", image: null },
             { week: 9, id: 3, question: "Strain gauge is a ________ device that converts electrical signal into ________.", options: ["Active; change of resistance", "Passive; change of resistance", "Active mechanical displacement change of resistance", "Passive; mechanical displacement"], answer: "Passive; change of resistance", image: null },
             { week: 9, id: 4, question: "PDMS is bonded to glass wafer by:", options: ["Plasma Bonding", "Anodic Bonding", "Using double sided adhesive", "Thermocompression"], answer: "Plasma Bonding", image: null },
-            { week: 9, id: 5, question: "What is the minimum input voltage (Vin) required for the diode to conduct in the Half wave rectifier shown? (Vf=0.7 V, Gain=10^4)", options: ["0.7 V", "1 V", "70 μV", "0 V"], answer: "70 μV", image: "https://placehold.co/400x150/1e40af/ffffff?text=W9+Q5+Image%3A+Half-Wave+Rectifier" },
+            { week: 9, id: 5, question: "What is the minimum input voltage (Vin) required for the diode to conduct in the Half wave rectifier shown? (Vf=0.7 V, Gain=10^4)", answer: "70 μV", image: "https://placehold.co/400x150/1e40af/ffffff?text=W9+Q5+Image%3A+Half-Wave+Rectifier", options: ["0.7 V", "1 V", "70 μV", "0 V"] },
             { week: 9, id: 6, question: "For the circuit in Q5, consider Vin is connected to 3V DC. Compute the relation between Voa and Vo.", options: ["Voa = Vo", "Voa > Vo", "Voa < Vo", "None of the mentioned"], answer: "Voa > Vo", image: null },
             { week: 9, id: 7, question: "What is the alternate method to measure the values of non-sinusoidal waveform other than AC voltmeter?", options: ["Clipper", "Clamper", "Peak detector", "Comparator"], answer: "Peak detector", image: null },
             { week: 9, id: 8, question: "Which of the following can be measured using Piezo-electric transducer?", options: ["Velocity", "Displacement", "Force", "Sound"], answer: "Force", image: null },
             { week: 9, id: 9, question: "Which is not part of the ECG Signal Conditioning Unit mentioned in the lecture?", options: ["Peak Detector", "Half Wave Rectifier", "Notch Filter", "All Pass Filter"], answer: "All Pass Filter", image: null },
-            { week: 9, id: 10, question: "If input V1 =5 Vp-p sine wave, compute the output voltage of the Op-amp U2 (Placeholder for image)", options: ["5 V Peak to Peak", "2.5 V Peak to Peak", "5 V", "2.5 V"], answer: "2.5 V Peak to Peak", image: "https://placehold.co/400x150/1e40af/ffffff?text=W9+Q10+Image%3A+Op-Amp+Circuit" },
+            { week: 9, id: 10, question: "If input V1 =5 Vp-p sine wave, compute the output voltage of the Op-amp U2 (Placeholder for image)", answer: "2.5 V Peak to Peak", image: "https://placehold.co/400x150/1e40af/ffffff?text=W9+Q10+Image%3A+Op-Amp+Circuit", options: ["5 V Peak to Peak", "2.5 V Peak to Peak", "5 V", "2.5 V"] },
             { week: 9, id: 11, question: "Which statement is not true for 3D Printing?", options: ["3D printing results in minimal usage of material.", "3D printing is an example of subtractive manufacturing.", "3D printing can generate different densities of material", "3D printing provides structures which are not possible to generate with conventional machining."], answer: "3D printing is an example of subtractive manufacturing.", image: null },
             { week: 9, id: 12, question: "In which method will liquid resin be converted to solid 3D object?", options: ["FDM (Fused Deposition Modelling)", "SLS (Selective Laser Sintering)", "SLA (Stereolithography)", "None of the above"], answer: "SLA (Stereolithography)", image: null },
 
@@ -235,7 +266,7 @@
             { week: 10, id: 8, question: "A centrifuge uses which difference between the particles and the medium in which they are dispersed to separate?", options: ["Surface roughness", "Temperature", "Density", "Hydrophobicity"], answer: "Density", image: null },
             { week: 10, id: 9, question: "Consider the following statements about vacuum desiccator: I. Used to store devices and wafers for future use and protect them from contamination. II. Stores devices in an inert gas filled environment.", options: ["I only", "II only", "I and II both", "Neither I nor II"], answer: "I only", image: null },
             { week: 10, id: 10, question: "If the magnification of an eye piece lens is 10x and the magnification of objective lens is 50x, then the total magnification is:", options: ["500x", "50x", "10x", "250x"], answer: "500x", image: null },
-            { week: 10, id: 11, question: "What is the difference between dark field microscopy and bright field microscopy?", options: ["Darkfield microscopy shows the specimens bright on a dark background whereas bright field microscopy shows the specimens dark on a bright background", "Darkfield microscopy shows the specimens dark on a dark background whereas bright field microscopy shows the specimens bright on a bright background", "Darkfield microscopy shows the specimens bright on a bright background whereas bright field microscopy shows the specimens dark on a dark background", "Darkfield microscopy shows the specimens dark on a bright background whereas bright field microscopy shows the specimens bright on a dark background"], answer: "Darkfield microscopy shows the specimens bright on a dark background whereas bright field microscopy shows the specimens dark on a bright background", image: null },
+            { week: 10, id: 11, question: "What is the difference between dark field microscopy and bright field microscopy?", options: ["Darkfield microscopy shows the specimens bright on a dark background whereas bright field microscopy shows the specimens dark on a bright background", "Darkfield microscopy shows the specimens dark on a dark background whereas bright field microscopy shows the specimens bright on a bright background", "Darkfield microscopy shows the specimens bright on a bright background whereas bright field microscopy shows the specimens dark on a dark background", "Darkfield microscopy shows the specimens dark on a bright background whereas bright field microscopy shows the specimens dark on a bright background"], answer: "Darkfield microscopy shows the specimens bright on a dark background whereas bright field microscopy shows the specimens dark on a bright background", image: null },
             { week: 10, id: 12, question: "________ microscopy is suitable for viewing colourless and transparent specimens and live cells.", options: ["Bright Field Microscopy", "Dark Field Microscopy", "Fluorescence Microscopy", "Phase Contrast Microscopy"], answer: "Phase Contrast Microscopy", image: null },
             { week: 10, id: 13, question: "Which of these statements regarding pumps in microfluidic devices is/are correct? I. Syringe pump allows for closed loop circulation while peristaltic pump does not. II. Both peristaltic and syringe pumps can be used for flowing the fluids.", options: ["Only I", "Only II", "Both I and II", "Neither I nor II"], answer: "Only II", image: null },
             { week: 10, id: 14, question: "To fabricate a PDMS microchannel structure:", options: ["An identical microchannel structure is patterned on silicon mold", "An inverted structure of that microchannel structure is patterned on silicon mold", "A PDMS block is patterned using photolithography (UV region)", "A PDMS block is patterned using e-beam lithography"], answer: "An inverted structure of that microchannel structure is patterned on silicon mold", image: null },
@@ -279,12 +310,18 @@
         let currentQuestionIndex = 0;
         let score = 0;
         let quizCompleted = false;
+        const LLM_MODEL = 'gemini-2.5-flash-preview-09-2025';
 
         const quizContent = document.getElementById('quiz-content');
         const progressElement = document.getElementById('progress');
         const feedbackBox = document.getElementById('feedback-box');
         const feedbackText = document.getElementById('feedback-text');
         const nextButton = document.getElementById('next-button');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtnNav = document.getElementById('next-btn-nav');
+        const hintBtn = document.getElementById('hint-btn');
+        const llmHintArea = document.getElementById('llm-hint-area');
+        const jumpMenu = document.getElementById('jump-menu'); // Added jump menu element reference
 
         // Utility to escape HTML and display text correctly (especially formulas)
         const escapeHtml = (unsafe) => {
@@ -299,6 +336,133 @@
             escaped = escaped.replace(/\(Placeholder for image\)/g, '<span class="text-sm italic text-red-500">[Circuit/Image Placeholder]</span>');
             return escaped;
         };
+        
+        // --- LLM API CALL AND LOGIC ---
+        
+        // Exponential backoff utility for robust API calls
+        const fetchWithRetry = async (url, options, maxRetries = 5) => {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        if (response.status === 429 && i < maxRetries - 1) { // Rate limit or transient error
+                            const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            continue;
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        };
+
+        const getLLMHint = async () => {
+            const data = quizData[currentQuestionIndex];
+            
+            // Show loading spinner and disable button
+            llmHintArea.classList.remove('hidden');
+            hintBtn.disabled = true;
+            llmHintArea.innerHTML = `
+                <div class="flex items-center space-x-2 text-hint-yellow">
+                    <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating a hint for Week ${data.week} concept...
+                </div>
+            `;
+            
+            const userQuery = `Provide a concise, focused conceptual hint or explanation for the following multiple-choice question without revealing the answer. Question: "${data.question}" Options: ${data.options.join(', ')}. Focus on the underlying concept or definition.`;
+            
+            const systemPrompt = "You are an expert tutor in 'Electronic Systems for Cancer Diagnosis'. You provide helpful, non-answer-revealing hints to help the user recall the core concept needed to solve the MCQ.";
+            
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                // Use Google Search for grounding technical concepts
+                tools: [{ "google_search": {} }],
+            };
+
+            try {
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a hint right now. Please try again.";
+                
+                llmHintArea.innerHTML = `
+                    <p class="font-bold text-hint-yellow mb-2">💡 Hint from AI Tutor:</p>
+                    <div class="prose prose-sm">${text}</div>
+                `;
+
+            } catch (error) {
+                console.error("LLM API Error:", error);
+                llmHintArea.innerHTML = `<p class="text-danger-red">Error: Failed to connect to the tutor. Please check your network or try again later.</p>`;
+            } finally {
+                hintBtn.disabled = false;
+            }
+        };
+
+        // --- NAVIGATION JUMP LOGIC ---
+
+        const populateJumpMenu = () => {
+            let lastWeek = -1;
+            let optGroup = null;
+
+            jumpMenu.innerHTML = '<option value="" disabled selected>Jump to Q#</option>'; // Reset default
+
+            quizData.forEach((data, index) => {
+                if (data.week !== lastWeek) {
+                    if (optGroup) {
+                        jumpMenu.appendChild(optGroup);
+                    }
+                    optGroup = document.createElement('optgroup');
+                    optGroup.label = `Week ${data.week} Assignment`;
+                    lastWeek = data.week;
+                }
+
+                const option = document.createElement('option');
+                option.value = index; // Store the array index
+                option.textContent = `Q${index + 1} (W${data.week})`;
+                optGroup.appendChild(option);
+            });
+
+            if (optGroup) {
+                jumpMenu.appendChild(optGroup);
+            }
+        };
+        
+        const jumpToSelectedQuestion = (indexString) => {
+            const newIndex = parseInt(indexString, 10);
+            if (!isNaN(newIndex) && newIndex >= 0 && newIndex < quizData.length) {
+                currentQuestionIndex = newIndex;
+                renderQuestion();
+            }
+            // Reset the dropdown selection to show the current Q number after jump
+            jumpMenu.value = currentQuestionIndex.toString();
+        };
+
+
+        // --- CORE QUIZ LOGIC (Modified) ---
+
+        const updateNavigationState = () => {
+            prevBtn.disabled = currentQuestionIndex === 0;
+            nextBtnNav.disabled = currentQuestionIndex === quizData.length - 1;
+            hintBtn.disabled = quizCompleted;
+        };
 
         const renderQuestion = () => {
             if (quizCompleted) return;
@@ -311,7 +475,6 @@
 
             let imageHtml = '';
             if (data.image) {
-                // Determine if it's a circuit/visual placeholder or a generic image
                 const isPlaceholder = data.image.includes('placehold.co');
                 const imageAlt = isPlaceholder ? 'Diagram Placeholder' : 'Question Image';
 
@@ -344,6 +507,40 @@
                 </div>
             `;
             quizContent.innerHTML = html;
+            
+            // Clear hint area and update nav state when new question loads
+            llmHintArea.classList.add('hidden');
+            llmHintArea.innerHTML = '';
+            
+            // Set jump menu to current question index
+            jumpMenu.value = currentQuestionIndex.toString();
+            
+            updateNavigationState();
+        };
+
+        const goToQuestion = (direction) => {
+            // This function handles the main navigation buttons (Prev/Next)
+            if (quizCompleted) return;
+
+            // Close the feedback modal if it's open
+            if (feedbackBox.classList.contains('flex')) {
+                feedbackBox.classList.remove('flex');
+                feedbackBox.classList.add('hidden');
+            }
+
+            let newIndex = currentQuestionIndex + direction;
+
+            if (newIndex >= 0 && newIndex < quizData.length) {
+                currentQuestionIndex = newIndex;
+                renderQuestion();
+            } else if (newIndex >= quizData.length) {
+                showResults();
+            }
+        };
+        
+        // This function is called only from the modal after checking an answer.
+        const nextQuestion = () => {
+            goToQuestion(1);
         };
 
         const checkAnswer = (selectedButton) => {
@@ -392,18 +589,6 @@
             nextButton.focus();
         };
 
-        const nextQuestion = () => {
-            feedbackBox.classList.remove('flex');
-            feedbackBox.classList.add('hidden');
-            currentQuestionIndex++;
-
-            if (currentQuestionIndex < quizData.length) {
-                renderQuestion();
-            } else {
-                showResults();
-            }
-        };
-
         const showResults = () => {
             quizCompleted = true;
             const totalQuestions = quizData.length;
@@ -419,10 +604,16 @@
                 </div>
             `;
             progressElement.textContent = `All assignments covered.`;
+            updateNavigationState(); // Disable hint button
+            prevBtn.disabled = true;
+            nextBtnNav.disabled = true;
         };
 
         // Start the quiz when the page loads
-        document.addEventListener('DOMContentLoaded', renderQuestion);
+        document.addEventListener('DOMContentLoaded', () => {
+            populateJumpMenu();
+            renderQuestion();
+        });
     </script>
 </body>
 </html>
